@@ -4,6 +4,7 @@ import { TryCatch } from "../utils/TryCatch.js";
 import bcrypt from "bcrypt";
 import getBuffer from "../utils/buffer.js";
 import axios from "axios";
+import jwt from "jsonwebtoken";
 
 
  const  userRegister=TryCatch(async(req,res,next)=>{
@@ -59,4 +60,55 @@ if (role === "employer") {
   
  })
 
- export {userRegister};
+ const userLogin=TryCatch(async(req,res,next)=>{
+     const {email,password}=req.body;
+     if(!email || !password){
+        throw new ErrorHandler(400,"All fields are required");
+     }
+
+    const user= await sql`
+SELECT u.user_id, u.name, u.email, u.password, u.phone_number, u.role, u.bio, u.resume,
+u.profile_pic, u.subscription,
+ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL) as skills
+FROM users u
+LEFT JOIN user_skills us ON u.user_id = us.user_id
+LEFT JOIN skills s ON us.skill_id = s.skill_id
+WHERE u.email = ${email}
+GROUP BY u.user_id;
+`;
+
+
+
+if (!user || user.length === 0) {
+  throw new ErrorHandler(404, "Invalid credentials");
+}
+
+const userData = user[0];
+
+const isMatchPassword = await bcrypt.compare(password, userData?.password);
+if (!isMatchPassword) {
+  throw new ErrorHandler(401, "Invalid credentials");
+}
+
+userData.skills = userData?.skills || [];
+delete userData?.password;
+
+  const token=jwt.sign({userId:userData?.user_id,role:userData?.role},process.env.JWT_SECRET_KEY as string,{
+    expiresIn:"15d",
+  });
+
+
+  res.status(200).json({
+    message:"User logged in successfully",
+    userData,
+    token,
+  });
+
+
+    
+
+
+
+ })
+
+ export {userRegister,userLogin};
