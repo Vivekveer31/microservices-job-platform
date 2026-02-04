@@ -5,6 +5,8 @@ import bcrypt from "bcrypt";
 import getBuffer from "../utils/buffer.js";
 import axios from "axios";
 import jwt from "jsonwebtoken";
+import { publishToTopic } from "../producer.js";
+import { forgotPasswordTemplate } from "../templete.js";
 
 
  const  userRegister=TryCatch(async(req,res,next)=>{
@@ -111,4 +113,37 @@ delete userData?.password;
 
  })
 
- export {userRegister,userLogin};
+ const forgotPassword=TryCatch(async(req,res,next)=>{
+    const {email}=req.body;
+    if(!email){
+      throw new ErrorHandler(400,"Email is required");
+
+    }
+ 
+
+ const use=await sql `SELECT user_id ,email FROM users WHERE email = ${email} `;
+ if(use.length===0){
+     return res.json({
+        message:"If a user with that email exists, a password reset link has been sent.",
+     })
+ }
+ const user=use[0];
+  const resetToken=jwt.sign({userId:user?.user_id},process.env.JWT_SECRET_KEY as string,{
+    expiresIn:"15m",
+  });
+  const resetLink=`${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+  const message={
+    to:email,
+    subject:"Password Reset Request",
+    html:forgotPasswordTemplate(resetLink),
+  };
+ publishToTopic('send-mail',message);
+ res.json({
+    message:"If a user with that email exists, a password reset link has been sent.",
+ });
+  });
+ 
+  
+
+ export {userRegister,userLogin,forgotPassword};
