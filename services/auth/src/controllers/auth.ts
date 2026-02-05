@@ -7,6 +7,7 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import { publishToTopic } from "../producer.js";
 import { forgotPasswordTemplate } from "../templete.js";
+import { redisClient } from "../index.js";
 
 
  const  userRegister=TryCatch(async(req,res,next)=>{
@@ -106,11 +107,6 @@ delete userData?.password;
     token,
   });
 
-
-    
-
-
-
  })
 
  const forgotPassword=TryCatch(async(req,res,next)=>{
@@ -128,11 +124,18 @@ delete userData?.password;
      })
  }
  const user=use[0];
-  const resetToken=jwt.sign({userId:user?.user_id},process.env.JWT_SECRET_KEY as string,{
+  const resetToken=jwt.sign(
+    {
+      email:user?.email,
+      type:"reset"
+    },
+    process.env.JWT_SECRET_KEY as string,{
     expiresIn:"15m",
   });
   const resetLink=`${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
+ await redisClient.set(`forgot-password:${email}`,resetToken,{
+    EX:900,
+ });
   const message={
     to:email,
     subject:"Password Reset Request",
@@ -144,6 +147,41 @@ delete userData?.password;
  });
   });
  
-  
+ const resetPassword=TryCatch(async(req,res,next)=>{
+     const {token}=req.params;
+      const {newPassword}=req.body;
 
- export {userRegister,userLogin,forgotPassword};
+      let decodedToken:any;
+
+      try {
+       decodedToken=jwt.verify(token,process.env.JWT_SECRET_KEY as string);
+      } catch (error) {
+        throw new ErrorHandler(400,"Invalid or expired token");
+      }
+
+      if(decodedToken.type!=="reset"){
+        throw new ErrorHandler(400,"Invalid token type");
+      }
+      const email=decodedToken.email;
+      const storedToken=await redisClient.get(`forgot-password:${email}`);
+      if(!storedToken || storedToken!==token){
+        throw new ErrorHandler(400,"Invalid or expired token");
+      }
+      const hashedPassword=await bcrypt.hash(newPassword,10);
+
+      const users= await sql `SELECT user_id FROM users WHERE email=${email} `;
+      if(users.length===0){
+        throw new ErrorHandler(404,"User not found");
+      }
+      const  user=users[0];
+
+       await sql` UPDATE users SET password=${hashedPassword} WHERE user_id=${user?.user_id} `;
+        await redisClient.del(`forgot-password:${email}`);
+
+
+        res.json({
+          message:"Password has been reset successfully",
+        })
+ }) 
+
+ export {userRegister,userLogin,forgotPassword,resetPassword};
