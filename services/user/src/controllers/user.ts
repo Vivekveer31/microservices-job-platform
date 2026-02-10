@@ -124,4 +124,68 @@ const updateResume=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
         updatedUser
        })
 })
-export { myProfile, getUserProfile, updateProfile, profilePicUpdate, updateResume }
+ const addSkills=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
+    const userId=req.user?.user_id;
+    const {skillsName}=req.body;
+    if(!userId){
+        throw new ErrorHandler(401,"Authentication is required");
+    }
+    if(!skillsName ||skillsName.trim() === ''){
+            throw new ErrorHandler(400,"At least one skill is required ");
+        }
+  let wasSkillAdded=false;
+       try {
+          await sql `BEGIN`;
+          const users=await sql `SELECT * FROM users WHERE uesr_id=${userId }`;
+        if(users.length===0){
+            throw new ErrorHandler(404,"User not found");
+        }
+        const [skill]= await sql ` INSERT INTO skills (name) VALUES (${skillsName.trim()}) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING skill_id`;
+        const skillId=skill?.skill_id;
+        const insertionResult=  await sql `INSERT INTO user_skills (user_id, skill_id) VALUES (${userId}, ${skillId}) ON CONFLICT (user_id, skill_id) DO NOTHING RETURNING user_id`;
+           if(insertionResult.length>0){
+            wasSkillAdded=true;
+           }
+            await sql `COMMIT`;
+       } catch (error) {
+        await sql `ROLLBACK`;
+        throw error;
+       }
+       
+       if(!wasSkillAdded){
+       return res.status(200).json({
+            message:"Skill already exists"
+        })
+       }
+       res.status(201).json({
+        message:`Skill ${skillsName.trim()} added successfully`
+       })
+
+       
+ });
+
+ const  deleteSkill=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
+    const userId=req.user?.user_id;
+    
+    if(!userId){
+        throw new ErrorHandler(401,"Authentication is required");
+    }
+    const {skillname}=req.body;
+    if(!skillname || skillname.trim() === ''){
+        throw new ErrorHandler(400,"Skill name is required");
+    }
+    const result = await sql `
+      DELETE FROM user_skills
+        WHERE user_id = ${userId} AND skill_id =(SELECT skill_id FROM skills WHERE name = ${skillname.trim()}) RETURNING user_id `
+        ;
+    if(result.length===0){
+       throw new ErrorHandler(404,`Skill ${skillname.trim()} not found for the user`);
+    }
+
+    res.json({
+        message:`Skill ${skillname.trim()} deleted successfully`
+    })
+
+ }
+);
+export { myProfile, getUserProfile, updateProfile, profilePicUpdate, updateResume, deleteSkill,addSkills }
