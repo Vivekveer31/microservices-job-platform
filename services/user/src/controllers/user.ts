@@ -88,4 +88,40 @@ const profilePicUpdate=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
         updatedUser
        })
 })
-export { myProfile, getUserProfile, updateProfile, profilePicUpdate }
+const updateResume=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
+     const user=req.user;
+     if(!user){
+        throw new ErrorHandler(401,"Authentication is required");
+        
+     }
+
+     const file=req.file;
+      if(!file){
+        throw new ErrorHandler(400,"Resume pdf file is required");
+
+      }
+
+      const fileBuffer=getBuffer(file);
+
+      if(!fileBuffer || !fileBuffer.content){
+        throw new ErrorHandler(400,"failed to process the  pdf file");
+      }
+       const oldResumePublicId=user.resume_public_id;
+
+       const {data:uploadResult}=await axios.post(`${process.env.UPLOAD_SERVICE_URL}/api/v1/utils/upload`,{
+        buffer:fileBuffer.content,
+        public_id:oldResumePublicId,
+       });
+
+       const [updatedUser]=await sql`
+          UPDATE users SET resume=${uploadResult.url} , resume_public_id=${uploadResult.public_id}
+          WHERE user_id=${user.user_id}
+          RETURNING user_id, name, email, phone_number, resume, resume_public_id
+       `;
+
+       res.json({
+        message:"Resume updated successfully",
+        updatedUser
+       })
+})
+export { myProfile, getUserProfile, updateProfile, profilePicUpdate, updateResume }
