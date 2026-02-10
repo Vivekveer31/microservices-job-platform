@@ -2,6 +2,8 @@ import { TryCatch } from "../utils/TryCatch.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { sql } from "../utils/db.js";
 import ErrorHandler from "../utils/errorHandler.js";
+import getBuffer from "../utils/buffer.js";
+import axios from "axios";
 const myProfile=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
     const user=req.user;
 
@@ -49,4 +51,41 @@ const updateProfile=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
     })
 
 })
-export { myProfile, getUserProfile, updateProfile }
+
+const profilePicUpdate=TryCatch(async(req:AuthenticatedRequest,res,next)=>{
+     const user=req.user;
+     if(!user){
+        throw new ErrorHandler(401,"Authentication is required");
+        
+     }
+
+     const file=req.file;
+      if(!file){
+        throw new ErrorHandler(400,"Profile picture file is required");
+
+      }
+
+      const fileBuffer=getBuffer(file);
+
+      if(!fileBuffer || !fileBuffer.content){
+        throw new ErrorHandler(400,"failed to process the profile picture file");
+      }
+       const oldProfilePicPublicId=user.profile_pic_public_id;
+
+       const {data:uploadResult}=await axios.post(`${process.env.UPLOAD_SERVICE_URL}/api/v1/utils/upload`,{
+        buffer:fileBuffer.content,
+        public_id:oldProfilePicPublicId,
+       });
+
+       const [updatedUser]=await sql`
+          UPDATE users SET profile_pic=${uploadResult.url} , profile_pic_public_id=${uploadResult.public_id}
+          WHERE user_id=${user.user_id}
+          RETURNING user_id, name, email, phone_number, profile_pic, profile_pic_public_id
+       `;
+
+       res.json({
+        message:"Profile picture updated successfully",
+        updatedUser
+       })
+})
+export { myProfile, getUserProfile, updateProfile, profilePicUpdate }
