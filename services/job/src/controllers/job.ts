@@ -4,6 +4,7 @@ import { TryCatch } from "../utils/TryCatch.js";
 import { sql } from "../utils/db.js";
 import getBuffer from "../utils/buffer.js";
 import axios from "axios";
+import { error } from "console";
 
 
 const createCompany=TryCatch(async(req:AuthenticatedRequest,res)=>{
@@ -48,4 +49,25 @@ const createCompany=TryCatch(async(req:AuthenticatedRequest,res)=>{
             company:newCompany
          })
 })
-export {createCompany}
+
+const deleteCompany = TryCatch(async(req:AuthenticatedRequest,res)=>{
+    const user=req.user;
+
+    const {companyId}=req.params;
+
+     if(!user){
+      throw new  ErrorHandler(401,"Authentication  is reqiured");
+     }
+
+     const [company]= await sql `SELECT logo_public_id FROM companies WHERE company_id=${companyId} AND recruiter_id=${user?.user_id}`;
+
+     if(!company){
+      throw new ErrorHandler(404,"Company not found or your not autherized to delete it");
+     }
+
+     await sql `DELETE FROM companies WHERE company_id=${companyId}`;
+     res.json({
+      message:"company and associated jobs been deleted"
+     })
+})
+export {createCompany,deleteCompany}
