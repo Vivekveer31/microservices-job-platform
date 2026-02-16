@@ -102,4 +102,53 @@ const createJob = TryCatch(async(req:AuthenticatedRequest,res)=>{
      
 
 })
-export {createCompany,deleteCompany,createJob }
+
+const updateJob= TryCatch(async(req:AuthenticatedRequest,res)=>{
+     const user=req.user
+
+     if(!user){
+        throw new ErrorHandler(401,"Authenticatoin Error");
+     }
+
+      if(user.role!="recruiter"){
+        throw new ErrorHandler(403,"only recruter can create company");
+      }
+      const {title,description,salary,role,location,job_type,work_location,company_id,openings,is_active}=req.body;
+       if(!title || !description || !salary || !role || !location || !job_type  || !work_location ||  !company_id || !openings ){
+          throw new ErrorHandler(401," All fields are required");
+
+       }
+       const {jobId}=req.params;
+
+       const [existingJob] = await sql ` SELECT podted_by_recruiter_id FROM jobs WHERE job_id=${jobId} `;
+
+        if(!existingJob){
+         throw new ErrorHandler(404, "job not found  found");
+        }
+
+         if(existingJob.podted_by_recruiter_id!== user.user_id){
+             throw new ErrorHandler(403,"Forbidden:You are not allowed");
+         }
+
+
+          const [updatedJob] = await sql `UPDATE jobs SET title = ${title},
+          description = ${description},
+          location = ${location},
+          role = ${role},
+          job_type =${job_type}
+          work_location=${work_location},
+          openings=${openings},
+          is_active=${is_active}
+          WHERE job_id = ${jobId} RETURINING *`;
+
+
+          res.json({
+            message:"job Updated Successfully",
+            job:updateJob
+          })
+
+
+
+        
+})
+export {createCompany,deleteCompany,createJob ,updateJob}
