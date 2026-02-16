@@ -70,4 +70,36 @@ const deleteCompany = TryCatch(async(req:AuthenticatedRequest,res)=>{
       message:"company and associated jobs been deleted"
      })
 })
-export {createCompany,deleteCompany}
+
+const createJob = TryCatch(async(req:AuthenticatedRequest,res)=>{
+     const user=req.user
+
+     if(!user){
+        throw new ErrorHandler(401,"Authenticatoin Error");
+     }
+
+      if(user.role!="recruiter"){
+        throw new ErrorHandler(403,"only recruter can create company");
+      }
+      const {title,description,salary,role,location,job_type,work_location,company_id,openings}=req.body;
+       if(!title || !description || !salary || !role || !location || !job_type  || !work_location ||  !company_id || !openings ){
+          throw new ErrorHandler(401," All fields are required");
+
+       }
+
+       const [company] = await sql ` SELECT company_id  FROM companies WHERE company_id=${company_id} AND recruiter_id = ${user.user_id}`;
+
+        if(!company){
+         throw new ErrorHandler(404, "company not found");
+        }
+
+        const [ newJob] = await sql `INSERT INTO jobs (title,description,salary,role,location,job_type,work_location,company_id,openings) VALUES (${title},${description},${salary},${role},${location},${job_type},${work_location},${company_id},${openings}) RETURNING *`;
+
+        res.json({
+         message:"Job created successfully",
+         job:newJob
+        })
+     
+
+})
+export {createCompany,deleteCompany,createJob }
