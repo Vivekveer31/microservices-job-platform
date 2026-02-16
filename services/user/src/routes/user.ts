@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import { addSkills, deleteSkill, getUserProfile, myProfile, profilePicUpdate, updateProfile,updateResume} from '../controllers/user.js';
+import { addSkills, applyForJob, deleteSkill, getAllapplications, getUserProfile, myProfile, profilePicUpdate, updateProfile,updateResume} from '../controllers/user.js';
 import { isAuth } from '../middleware/auth.js';
 import uploadFile from '../middleware/multer.js';
 
@@ -13,6 +13,8 @@ router.route('/profile-pic').put(isAuth,uploadFile,profilePicUpdate);
 router.route('/resume').put(isAuth,uploadFile,updateResume);
 router.route('/skills/add').post(isAuth,addSkills);
 router.route('/skills/remove').delete(isAuth,deleteSkill);
+router.route("/apply/:job_id").post(isAuth,applyForJob);
+router.route("/application/all").get(isAuth,getAllapplications);
 
 export default router;
 
