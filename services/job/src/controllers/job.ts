@@ -215,4 +215,10 @@ let paramIndex =1;
   res.json(jobs);
 
   })
-export {createCompany,deleteCompany,createJob ,updateJob,getAllCompany,getCompanyDetails}
+
+  const getSingleJob = TryCatch(async(req:AuthenticatedRequest,res)=>{
+    const  [job] = await  sql ` SELECT * FROM jobs WHERE job_id=${req.params.jobId}`;
+   res.json(job);
+
+  })
+export {createCompany,deleteCompany,createJob ,updateJob,getAllCompany,getCompanyDetails,getAllActiveJobs,getSingleJob}
