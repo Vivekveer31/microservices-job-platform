@@ -151,4 +151,14 @@ const updateJob= TryCatch(async(req:AuthenticatedRequest,res)=>{
 
         
 })
-export {createCompany,deleteCompany,createJob ,updateJob}
+
+
+const getAllCompany= TryCatch(async(req:AuthenticatedRequest,res)=>{
+
+     const user=req.user;
+
+      const companies= await sql `SELECT * FROM  companies WHERE recruiter_id=${user?.user_id}`;
+
+      res.json(companies);
+})
+export {createCompany,deleteCompany,createJob ,updateJob,getAllCompany}
