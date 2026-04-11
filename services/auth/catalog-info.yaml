@@ -1,0 +1,16 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: auth-service
+  description: Handles user authentication, registration, and profile management (including profile photo upload via utils-service)
+  tags:
+    - nodejs
+    - microservice
+    - auth
+spec:
+  type: service
+  owner: backend-team
+  lifecycle: production
+  dependsOn:
+    - component:default/utils-service
+  
