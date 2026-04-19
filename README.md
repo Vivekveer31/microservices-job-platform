@@ -113,4 +113,7 @@ graph TD
 ---
 
 
-Developed with ❤️ by [Vivek Veer](https://github.com/Vivekveer31)
+## 👨‍💻 Author
+**Vivek** - [GitHub](https://github.com/Vivekveer31)
+
+---
