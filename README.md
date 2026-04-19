@@ -13,6 +13,8 @@ A distributed, high-performance job recruitment platform architected with a micr
 
 The platform follows a distributed microservices architecture supporting user onboarding, job applications, payments, and AI-based resume evaluation. Communication is handled via REST APIs and an **asynchronous event-driven architecture using Kafka**.
 
+## 📐 High-Level Design (HLD)
+
 ```mermaid
 graph TD
     Client((Next.js Frontend)) --> |REST API| Gateway[API Gateway / K8s Ingress]
